@@ -35,10 +35,18 @@ class crc8:
                         0xDE,0xD9,0xD0,0xD7,0xC2,0xC5,0xCC,0xCB,
                         0xE6,0xE1,0xE8,0xEF,0xFA,0xFD,0xF4,0xF3)
 
-    def crc(self, msg):
+    def crc(self, msg, weigh_fn):
         runningCRC = 0
+        if weigh_fn:
+            i = 0
+            for c in msg:
+                c = eval(weigh_fn) % 256
+                runningCRC = self.crcTable[runningCRC ^ c]
+                i += 1
+            return runningCRC
+
         for c in msg:
-            c = ord(c) % 256
+            c = (ord(c) * 23) % 256
             runningCRC = self.crcTable[runningCRC ^ c]
         return runningCRC
 
@@ -106,9 +114,12 @@ class colorcoder(sublime_plugin.TextCommand,sublime_plugin.EventListener):
         for i in map(hex,range(256)):
             regs[i] = []
 
+        set = sublime.load_settings("colorcoder.sublime-settings")
+        weigh_fn = set.get("weigh_fn")
+
         for sel in scopes:
             for r in self.view.find_by_selector(sel):
-                regs[hex(hasher.crc(self.view.substr(r)))].append(r)
+                regs[hex(hasher.crc(self.view.substr(r), weigh_fn))].append(r)
 
         for key in regs:
             self.view.add_regions('cc'+key,regs[key],'cc'+key,'', sublime.DRAW_NO_OUTLINE )

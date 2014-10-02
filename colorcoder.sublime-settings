@@ -1,4 +1,5 @@
 {
+	"weigh_fn": "ord(c) * 23",
 	"scopes": ["colorize",
 	           "entity.name",
 	           "support.function",
