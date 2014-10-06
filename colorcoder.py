@@ -106,14 +106,32 @@ class colorcoder(sublime_plugin.TextCommand,sublime_plugin.EventListener):
         for i in map(hex,range(256)):
             regs[i] = []
 
+        set = sublime.load_settings("colorcoder.sublime-settings")
+        crc_in_text = set.get('crc_in_text', False)
         for sel in scopes:
             for r in self.view.find_by_selector(sel):
+                if crc_in_text:
+                    crc = self.find_crc_in_text(self.view.substr(r), regs)
+                    if crc:
+                        regs[crc].append(r)
+                        continue
                 regs[hex(hasher.crc(self.view.substr(r)))].append(r)
 
         for key in regs:
             self.view.add_regions('cc'+key,regs[key],'cc'+key,'', sublime.DRAW_NO_OUTLINE )
 
         del regs
+
+    def find_crc_in_text(self, text, regs):
+        ''' check if text contains crc in hexa format (ex: abc0xf6, _0x3xyz) '''
+        position = text.find('0x')
+        if position < 0:    return False
+        ''' find 0x10..0xff '''
+        crc = text[position:position+4]
+        if crc in regs:     return crc
+        ''' find 0x0..0xf '''
+        crc = text[position:position+3]
+        if crc in regs:     return crc
 
 class colorcodertoggler(sublime_plugin.ApplicationCommand):
     def run(self):
@@ -192,11 +210,17 @@ class colorshemeemodifier(sublime_plugin.ApplicationCommand):
 
             cs["name"] = cs["name"] + " (Colorcoded)"
 
+            set = sublime.load_settings("colorcoder.sublime-settings")
+            lightness_fn  = eval(set.get('lightness_fn' , 'lambda l,i: l - (i %  8) / 50.'))
+            saturation_fn = eval(set.get('saturation_fn', 'lambda s,i: s + (i % 16) / 80.'))
+            i = 0
             for x in range(0,256):
+                color = colorsys.hls_to_rgb(x/256., lightness_fn(l,i), saturation_fn(s,i));
+                i += 1
                 cs["settings"].append(dict(
                     scope="cc0x%x" % x,
                     settings=dict(
-                        foreground="#"+''.join(map(lambda c: "%02x" % int(256*c),colorsys.hls_to_rgb(x/256., l, s))),
+                        foreground="#"+''.join(map(lambda c: "%02x" % int(256*c), color)),
                         background=tokenclr
                     )
                 ))

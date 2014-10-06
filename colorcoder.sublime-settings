@@ -5,6 +5,19 @@
 	           "meta.function-call",
 	           "variable.other"],
 	"auto_apply_on_scheme_change": true,
+
+	// set "crc_in_text" to true to use a crc inside text to match a generated color
+	// (if not found, a crc will be computed as usual)
+	// This allows you to use any color for a text, or see all colors at once
+	//
+	// eg: abc0xfxyz contains 0xf, so it will match the color at index 0xf
+	// eg: xyz0x3abc contains 0x3a, so its color will be at index 0x3a
+	"crc_in_text": false,
+
+	// lambda functions (in Python) to alter lightness and saturation of generated colors
+	// (to make colors more distinct)
+	"lightness_fn": "lambda l,i: l - (i %  8) / 50.",
+	"saturation_fn": "lambda s,i: s + (i % 16) / 80.",
 	"lightness":0.5,
 	"saturation":0.5
 }
