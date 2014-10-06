@@ -1,5 +1,5 @@
 {
-	"weigh_fn": "ord(c) * 23",
+	"weigh_fn": "lambda char: ord(char) * 23",
 	"scopes": ["colorize",
 	           "entity.name",
 	           "support.function",

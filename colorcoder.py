@@ -37,16 +37,8 @@ class crc8:
 
     def crc(self, msg, weigh_fn):
         runningCRC = 0
-        if weigh_fn:
-            i = 0
-            for c in msg:
-                c = eval(weigh_fn) % 256
-                runningCRC = self.crcTable[runningCRC ^ c]
-                i += 1
-            return runningCRC
-
         for c in msg:
-            c = (ord(c) * 23) % 256
+            c = weigh_fn(c) % 256
             runningCRC = self.crcTable[runningCRC ^ c]
         return runningCRC
 
@@ -115,7 +107,7 @@ class colorcoder(sublime_plugin.TextCommand,sublime_plugin.EventListener):
             regs[i] = []
 
         set = sublime.load_settings("colorcoder.sublime-settings")
-        weigh_fn = set.get("weigh_fn")
+        weigh_fn = eval(set.get("weigh_fn", 'lambda char: ord(char) * 23'))
 
         for sel in scopes:
             for r in self.view.find_by_selector(sel):
