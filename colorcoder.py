@@ -42,8 +42,17 @@ class crc8:
             runningCRC = self.crcTable[runningCRC ^ c]
         return runningCRC
 
+    def forced_crc(self, msg):
+        global hex_pattern
+        match = hex_pattern.search(msg)
+        if match:
+            return int(match.group(0), 16)
+        else:
+            return self.crc(msg)
+
 hasher = crc8()
 scopes = []
+hex_pattern = re.compile('0x[0-9a-f]{1,2}')
 
 class colorcoder(sublime_plugin.TextCommand,sublime_plugin.EventListener):
 
@@ -108,30 +117,15 @@ class colorcoder(sublime_plugin.TextCommand,sublime_plugin.EventListener):
 
         set = sublime.load_settings("colorcoder.sublime-settings")
         crc_in_text = set.get('crc_in_text', False)
+        hash_fn = hasher.forced_crc if crc_in_text else hasher.crc
         for sel in scopes:
             for r in self.view.find_by_selector(sel):
-                if crc_in_text:
-                    crc = self.find_crc_in_text(self.view.substr(r), regs)
-                    if crc:
-                        regs[crc].append(r)
-                        continue
-                regs[hex(hasher.crc(self.view.substr(r)))].append(r)
+                regs[hex(hash_fn(self.view.substr(r)))].append(r)
 
         for key in regs:
             self.view.add_regions('cc'+key,regs[key],'cc'+key,'', sublime.DRAW_NO_OUTLINE )
 
         del regs
-
-    def find_crc_in_text(self, text, regs):
-        ''' check if text contains crc in hexa format (ex: abc0xf6, _0x3xyz) '''
-        position = text.find('0x')
-        if position < 0:    return False
-        ''' find 0x10..0xff '''
-        crc = text[position:position+4]
-        if crc in regs:     return crc
-        ''' find 0x0..0xf '''
-        crc = text[position:position+3]
-        if crc in regs:     return crc
 
 class colorcodertoggler(sublime_plugin.ApplicationCommand):
     def run(self):
