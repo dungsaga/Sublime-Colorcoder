@@ -213,10 +213,8 @@ class colorshemeemodifier(sublime_plugin.ApplicationCommand):
             set = sublime.load_settings("colorcoder.sublime-settings")
             lightness_fn  = eval(set.get('lightness_fn' , 'lambda l,i: l - (i %  8) / 50.'))
             saturation_fn = eval(set.get('saturation_fn', 'lambda s,i: s + (i % 16) / 80.'))
-            i = 0
             for x in range(0,256):
-                color = colorsys.hls_to_rgb(x/256., lightness_fn(l,i), saturation_fn(s,i));
-                i += 1
+                color = colorsys.hls_to_rgb(x/256., lightness_fn(l,x), saturation_fn(s,x));
                 cs["settings"].append(dict(
                     scope="cc0x%x" % x,
                     settings=dict(
