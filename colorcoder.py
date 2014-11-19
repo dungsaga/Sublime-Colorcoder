@@ -45,7 +45,9 @@ class crc8:
 hasher = crc8()
 scopes = []
 
-class colorcoder(sublime_plugin.TextCommand,sublime_plugin.EventListener):
+use_textcommand = True
+
+class colorcoder(sublime_plugin.EventListener):
 
     def on_new(self,view):
         view.settings().set('colorcode',True)
@@ -64,8 +66,9 @@ class colorcoder(sublime_plugin.TextCommand,sublime_plugin.EventListener):
                 view.settings().set('colorcode',False)
                 return
 
-        if view.size() > set.get('max_size',10000) and not view.settings().get('forcecolorcode',False):
+        if view.size() > set.get('max_size') and not view.settings().get('forcecolorcode',False):
             sublime.status_message("File is too big, disabling colorcoding as it might hurt perfromance")
+            colorcoder.remove_colorcode(view)
             view.settings().set('colorcode',False)
             return
 
@@ -85,21 +88,29 @@ class colorcoder(sublime_plugin.TextCommand,sublime_plugin.EventListener):
         self.on_load(view)
 
     def on_modified_async(self, view):
-        view.run_command("colorcoder")
+        global use_textcommand
+        if view.settings().get('colorcode',False) or view.settings().get('forcecolorcode',False):
+            if use_textcommand:
+                view.run_command("colorcode")
+            else:
+                colorcoder.colorcode(view)
 
     @staticmethod
     def update_scopes():
         global scopes
         scopes = sublime.load_settings("colorcoder.sublime-settings").get('scopes')
 
+    @staticmethod
+    def update_use_textcommand():
+        global use_textcommand
+        use_textcommand = sublime.load_settings("colorcoder.sublime-settings").get('use_fast_highlighting_but_undo_typing_letterwise')
+
     def on_post_text_command(self, view, cmd, args):
         if cmd=="set_file_type":
-            sublime.active_window().active_view().run_command("colorcoder")
+            self.on_modified_async(sublime.active_window().active_view())
 
-    def __init__(self, view = None):
-        self.view = view
-
-    def run(self, edit):
+    @staticmethod
+    def colorcode(view):
         global hasher, scopes
 
         regs = {}
@@ -107,13 +118,23 @@ class colorcoder(sublime_plugin.TextCommand,sublime_plugin.EventListener):
             regs[i] = []
 
         for sel in scopes:
-            for r in self.view.find_by_selector(sel):
-                regs[hex(hasher.crc(self.view.substr(r)))].append(r)
+            for r in view.find_by_selector(sel):
+                regs[hex(hasher.crc(view.substr(r)))].append(r)
 
         for key in regs:
-            self.view.add_regions('cc'+key,regs[key],'cc'+key,'', sublime.DRAW_NO_OUTLINE )
+            view.add_regions('cc'+key,regs[key],'cc'+key,'', sublime.DRAW_NO_OUTLINE )
 
         del regs
+
+    @staticmethod
+    def remove_colorcode(view):
+        for i in map(hex,range(256)):
+            view.erase_regions('cc'+i)
+
+class colorcode(sublime_plugin.TextCommand):
+    def run(self, edit):
+        colorcoder.colorcode(self.view)
+
 
 class colorcodertoggler(sublime_plugin.ApplicationCommand):
     def run(self):
@@ -123,18 +144,18 @@ class colorcodertoggler(sublime_plugin.ApplicationCommand):
         view.settings().set('forcecolorcode',False)
 
         if cc:
-            for i in map(hex,range(256)):
-                view.erase_regions('cc'+i)
+            colorcoder.remove_colorcode(view)
         else:
-            if view.size() > sublime.load_settings("colorcoder.sublime-settings").get('max_size',10000):
+            if view.size() > sublime.load_settings("colorcoder.sublime-settings").get('max_size'):
                 view.settings().set('forcecolorcode',True)
-            view.run_command("colorcoder")
+            view.run_command("colorcode")
 
     def is_checked(self):
-        return sublime.active_window().active_view().settings().get('colorcode',False)
+        viewset = sublime.active_window().active_view().settings()
+        return viewset.get('colorcode',False) or viewset.get('forcecolorcode',False)
 
     def description(self):
-        if sublime.active_window().active_view().size() > sublime.load_settings("colorcoder.sublime-settings").get('max_size',10000):
+        if sublime.active_window().active_view().size() > sublime.load_settings("colorcoder.sublime-settings").get('max_size'):
             return "Colorcoding may hurt performance, File is large"
         else:
             return "Colorcode this view"
@@ -164,7 +185,7 @@ class colorshemeemodifier(sublime_plugin.ApplicationCommand):
         read_original = read_original and sublime.load_settings("Preferences.sublime-settings").has("original_color_scheme")
         if read_original and sublime.load_settings("Preferences.sublime-settings").get('color_scheme').find('/Colorcoder/') == -1:
             read_original = False
-        if sublime.load_settings("Preferences.sublime-settings").get('original_color_scheme').find('/Colorcoder/') != -1:
+        if read_original and sublime.load_settings("Preferences.sublime-settings").get('original_color_scheme').find('/Colorcoder/') != -1:
             print("original theme already colorcoded, abort")
             return
         global modification_running
@@ -228,7 +249,9 @@ class colorcoderInspectScope(sublime_plugin.ApplicationCommand):
 def plugin_loaded():
     sublime.load_settings("Preferences.sublime-settings").add_on_change('color_scheme',colorshemeemodifier.maybefixscheme)
     sublime.load_settings("colorcoder.sublime-settings").add_on_change('scopes',colorcoder.update_scopes)
+    sublime.load_settings("colorcoder.sublime-settings").add_on_change('use_textcommand',colorcoder.update_use_textcommand)
     colorcoder.update_scopes()
+    colorcoder.update_use_textcommand()
     pp = sublime.packages_path()
     if not os.path.exists(pp+"/Colorcoder"):
         os.makedirs(pp+"/Colorcoder")
@@ -241,5 +264,4 @@ def plugin_loaded():
     for wnd in sublime.windows():
         for view in wnd.views():
             view.settings().set('colorcode',True)
-            view.run_command("colorcoder")
-
+            view.run_command("colorcode")
