@@ -220,7 +220,7 @@ class colorshemeemodifier(sublime_plugin.ApplicationCommand):
                 cs["settings"].append(dict(
                     scope="cc0x%x" % x,
                     settings=dict(
-                        foreground="#"+''.join(map(lambda c: "%02x" % int(256*c),colorsys.hls_to_rgb(x/256., l, s))),
+                        foreground="#%02x%02x%02x" % colorsys.hls_to_rgb(x/256., l, s),
                         background=tokenclr
                     )
                 ))
