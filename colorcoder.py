@@ -67,7 +67,7 @@ class colorcoder(sublime_plugin.EventListener):
                 return
 
         if view.size() > set.get('max_size') and not view.settings().get('forcecolorcode',False):
-            sublime.status_message("File is too big, disabling colorcoding as it might hurt perfromance")
+            sublime.status_message("File is too big, disabling colorcoding as it might hurt performance")
             colorcoder.remove_colorcode(view)
             view.settings().set('colorcode',False)
             return
