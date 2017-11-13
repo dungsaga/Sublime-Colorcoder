@@ -177,15 +177,15 @@ class colorshemeemodifier(sublime_plugin.ApplicationCommand):
     def maybefixscheme():
         set = sublime.load_settings("colorcoder.sublime-settings")
         if set.get('auto_apply_on_scheme_change'):
-            if sublime.load_settings("Preferences.sublime-settings").get('color_scheme').find('/Colorcoder/') == -1:
+            if sublime.load_settings("Preferences.sublime-settings").get('color_scheme').find('(Colorcoded)') == -1:
                 colorshemeemodifier.modify_color_scheme(set.get('lightness'),set.get('saturation'))
 
     @staticmethod
     def modify_color_scheme(l,s,read_original = False):
         read_original = read_original and sublime.load_settings("Preferences.sublime-settings").has("original_color_scheme")
-        if read_original and sublime.load_settings("Preferences.sublime-settings").get('color_scheme').find('/Colorcoder/') == -1:
+        if read_original and sublime.load_settings("Preferences.sublime-settings").get('color_scheme').find('(Colorcoded)') == -1:
             read_original = False
-        if read_original and sublime.load_settings("Preferences.sublime-settings").get('original_color_scheme').find('/Colorcoder/') != -1:
+        if read_original and sublime.load_settings("Preferences.sublime-settings").get('original_color_scheme').find('(Colorcoded)') != -1:
             print("original theme already colorcoded, abort")
             return
         global modification_running
